@@ -107,9 +107,19 @@ header {
     transition: all var(--a-snappy); outline: none;
     box-sizing: border-box;
 }
+.search-input::placeholder { color: rgba(255, 255, 255, 0.6); }
 .search-input:focus {
     background: rgba(255, 255, 255, 0.12) !important;
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2), 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+.search-input:focus::placeholder { color: rgba(255, 255, 255, 0.9); }
+
+.search-icon { opacity: 0.4; transition: opacity 0.2s var(--ease-snappy); }
+.search-icon.loading { animation: pulse 1.5s infinite; }
+@keyframes pulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+    100% { opacity: 0.4; }
 }
 
 .suggestions-dropdown {
