@@ -77,31 +77,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     ];
 
     let state = {
-        bookmarks: await Storage.get('bookmarks', defaultBookmarks),
-        timeFormat: await Storage.get('timeFormat', '12h'),
-        focusMode: await Storage.get('focusMode', false),
-        bangHistory: await Storage.get('bangHistory', {}),
+        bookmarks: defaultBookmarks,
+        timeFormat: '12h',
+        focusMode: false,
+        bangHistory: {},
         selectedIndex: -1,
         suggestionElements: [],
         debounceTimer: null,
         lastQuery: ''
     };
 
-    // Ensure defaults are used if empty
-    if (state.bookmarks.length === 0) {
-        state.bookmarks = [...defaultBookmarks];
-    }
-
-    // Entrance
-    setTimeout(() => {
-        document.querySelectorAll('.entrance-reveal').forEach((el, i) => {
-            setTimeout(() => el.classList.add('revealed'), i * 60);
-        });
-        if (state.focusMode) document.body.classList.add('focus-active');
-        searchInput.focus();
-    }, 50);
-
-    // Clock
     const updateClock = () => {
         const now = new Date();
         let h = now.getHours();
@@ -120,17 +105,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (timeToggle) timeToggle.textContent = state.timeFormat.toUpperCase();
     };
 
-    timeToggle.addEventListener('click', async () => {
-        state.timeFormat = state.timeFormat === '12h' ? '24h' : '12h';
-        await Storage.set('timeFormat', state.timeFormat);
-        updateClock();
-    });
-
-    // Bookmarks
     const getIconUrl = (url) => {
         try {
             const domain = new URL(url).hostname;
-            // High quality icons from unavatar
             return `https://unavatar.io/${domain}?fallback=https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
         } catch (e) { return ''; }
     };
@@ -183,38 +160,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         tabTray.appendChild(addBtn);
     };
 
-    // Modal
-    modalCancel.addEventListener('click', () => modal.classList.add('hidden'));
-    
-    // Move to next input on Enter, save on Enter in last input
-    siteNameInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            siteUrlInput.focus();
-        }
-    });
-
-    siteUrlInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            modalSave.click();
-        }
-    });
-
-    modalSave.addEventListener('click', async () => {
-        const name = siteNameInput.value.trim();
-        let url = siteUrlInput.value.trim();
-        if (name && url) {
-            if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-            state.bookmarks.push({ name, url });
-            await Storage.set('bookmarks', state.bookmarks);
-            renderTray();
-            modal.classList.add('hidden');
-            siteNameInput.value = ''; siteUrlInput.value = '';
-        }
-    });
-
-    // Suggestions Logic - EXACT FROM REFERENCE
     const updateBangIndicator = (query) => {
         if (!bangIndicator) return;
         const trigger = query.split(' ')[0].toLowerCase();
@@ -263,9 +208,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         suggestionsList.classList.add('active');
     };
 
-    // Proxy to allow global callback to trigger local renderSuggestions
-    window.renderSuggestionsProxy = (suggestions) => renderSuggestions(suggestions);
-
     const updateSelection = (index) => {
         state.suggestionElements.forEach(el => el.classList.remove('selected'));
         state.selectedIndex = index;
@@ -273,6 +215,68 @@ document.addEventListener('DOMContentLoaded', async () => {
             state.suggestionElements[index].classList.add('selected');
         }
     };
+
+    // Initial render
+    updateClock();
+    renderTray();
+    updateBangIndicator('');
+
+    // Load actual state
+    const loadedBookmarks = await Storage.get('bookmarks', defaultBookmarks);
+    state.bookmarks = loadedBookmarks.length > 0 ? loadedBookmarks : defaultBookmarks;
+    state.timeFormat = await Storage.get('timeFormat', '12h');
+    state.focusMode = await Storage.get('focusMode', false);
+    state.bangHistory = await Storage.get('bangHistory', {});
+
+    updateClock();
+    renderTray();
+
+    // Entrance
+    setTimeout(() => {
+        document.querySelectorAll('.entrance-reveal').forEach((el, i) => {
+            setTimeout(() => el.classList.add('revealed'), i * 60);
+        });
+        if (state.focusMode) document.body.classList.add('focus-active');
+        searchInput.focus();
+    }, 100);
+
+    // Events
+    timeToggle.addEventListener('click', async () => {
+        state.timeFormat = state.timeFormat === '12h' ? '24h' : '12h';
+        await Storage.set('timeFormat', state.timeFormat);
+        updateClock();
+    });
+
+    modalCancel.addEventListener('click', () => modal.classList.add('hidden'));
+    
+    siteNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            siteUrlInput.focus();
+        }
+    });
+
+    siteUrlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            modalSave.click();
+        }
+    });
+
+    modalSave.addEventListener('click', async () => {
+        const name = siteNameInput.value.trim();
+        let url = siteUrlInput.value.trim();
+        if (name && url) {
+            if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+            state.bookmarks.push({ name, url });
+            await Storage.set('bookmarks', state.bookmarks);
+            renderTray();
+            modal.classList.add('hidden');
+            siteNameInput.value = ''; siteUrlInput.value = '';
+        }
+    });
+
+    window.renderSuggestionsProxy = (suggestions) => renderSuggestions(suggestions);
 
     searchInput.addEventListener('input', (e) => {
         const val = e.target.value;
@@ -348,7 +352,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = `${engine}${encodeURIComponent(val)}`;
     });
 
-    updateClock();
     setInterval(updateClock, 1000);
-    renderTray();
 });
