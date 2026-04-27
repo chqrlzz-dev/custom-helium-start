@@ -182,15 +182,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       span.className = "site-name";
       span.textContent = item.name;
 
-      const domainSpan = document.createElement("span");
-      domainSpan.className = "site-domain";
-      try {
-        domainSpan.textContent = new URL(item.url).hostname.replace("www.", "");
-      } catch(e) {
-        domainSpan.textContent = "";
-      }
-
-      info.append(span, domainSpan);
+      info.append(span);
       a.append(actions, icon, info);
       tabTray.appendChild(a);
     });
