@@ -23,6 +23,19 @@ const Storage = {
     }
 };
 
+// Global callback for JSONP Google Suggestions
+window.handleGoogleSuggestions = (data) => {
+    const searchIcon = document.querySelector('.search-icon');
+    const suggestionsList = document.getElementById('suggestions-list');
+    if (searchIcon) searchIcon.classList.remove('loading');
+    
+    // We need to access state.lastQuery. Since it's inside DOMContentLoaded, 
+    // we'll rely on the fact that data[0] is the original query.
+    if (data && data[1] && window.renderSuggestionsProxy) {
+        window.renderSuggestionsProxy(data[1].slice(0, 6));
+    }
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
     // UI Elements
     const clockEl = document.getElementById('clock');
@@ -43,11 +56,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     const siteNameInput = document.getElementById('site-name');
     const siteUrlInput = document.getElementById('site-url');
 
+    const ICONS = {
+        reddit: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 11.5c0-1.65-1.35-3-3-3-.61 0-1.18.19-1.66.51-1.67-1.18-4.31-2-7.32-2l1.5-4.5 4.5 1c0 1.1.9 2 2 2 1.1 0 2-.9 2-2s-.9-2-2-2c-.76 0-1.42.42-1.75 1.05l-5.1-.1.15-.05-1.7 5.15c-3.03.03-5.7.85-7.39 2.04-.49-.33-1.07-.53-1.7-.53-1.65 0-3 1.35-3 3 0 1.22.74 2.27 1.79 2.73-.09.43-.14.88-.14 1.34 0 4.2 4.7 7.6 10.5 7.6s10.5-3.4 10.5-7.6c0-.46-.05-.91-.14-1.34 1.05-.46 1.79-1.51 1.79-2.73zM7.5 14c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 4c-1.5 1.5-4.5 1.5-6 0-.4-.4-.4-1 0-1.4.4-.4 1-.4 1.4 0 1.1.7 2.6.7 3.2 0 .4-.4 1-.4 1.4 0 .4.4.4 1 0 1.4zm-.5-2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/></svg>`,
+        messenger: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.618 4.469 8.627V24l4.088-2.242c1.092.303 2.243.464 3.443.464 6.627 0 12-4.974 12-11.111C24 4.974 18.627 0 12 0zm1.293 14.803l-3.074-3.273-5.996 3.273L10.707 7.31l3.074 3.273 5.996-3.273-6.484 7.493z"/></svg>`,
+        facebook: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`,
+        github: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.43.372.823 1.102.823 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>`,
+        gmail: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L12 9.573l8.073-6.08c1.618-1.214 3.927-.059 3.927 1.964z"/></svg>`,
+        instagram: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204 0.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>`,
+        gmeet: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.1 16.5l-3.3-3.3v2.8H7.2V8h6.6v2.8l3.3-3.3v9z"/></svg>`
+    };
+
     const defaultBookmarks = [
-        { name: 'GitHub', url: 'https://github.com' },
-        { name: 'YouTube', url: 'https://youtube.com' },
-        { name: 'Reddit', url: 'https://reddit.com' },
-        { name: 'HN', url: 'https://news.ycombinator.com' }
+        { name: 'Reddit', url: 'https://reddit.com', icon: 'reddit' },
+        { name: 'Messenger', url: 'https://messenger.com', icon: 'messenger' },
+        { name: 'GitHub', url: 'https://github.com', icon: 'github' },
+        { name: 'Facebook', url: 'https://facebook.com', icon: 'facebook' },
+        { name: 'Instagram', url: 'https://instagram.com', icon: 'instagram' },
+        { name: 'Gmail', url: 'https://mail.google.com', icon: 'gmail' },
+        { name: 'GMeet', url: 'https://meet.google.com', icon: 'gmeet' }
     ];
 
     let state = {
@@ -60,6 +86,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         debounceTimer: null,
         lastQuery: ''
     };
+
+    // Ensure defaults are used if empty
+    if (state.bookmarks.length === 0) {
+        state.bookmarks = [...defaultBookmarks];
+    }
 
     // Entrance
     setTimeout(() => {
@@ -124,13 +155,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const icon = document.createElement('div');
             icon.className = 'icon-shortcut';
-            const img = document.createElement('img');
-            img.src = getIconUrl(item.url);
-            img.onerror = () => {
-                img.style.display = 'none';
-                icon.innerHTML = `<span>${item.name[0].toUpperCase()}</span>`;
-            };
-            icon.appendChild(img);
+            
+            if (item.icon && ICONS[item.icon]) {
+                icon.innerHTML = ICONS[item.icon];
+            } else {
+                const img = document.createElement('img');
+                img.src = getIconUrl(item.url);
+                img.onerror = () => {
+                    img.style.display = 'none';
+                    icon.innerHTML = `<span>${item.name[0].toUpperCase()}</span>`;
+                };
+                icon.appendChild(img);
+            }
             
             const span = document.createElement('span');
             span.className = 'site-name';
@@ -149,6 +185,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Modal
     modalCancel.addEventListener('click', () => modal.classList.add('hidden'));
+    
+    // Move to next input on Enter, save on Enter in last input
+    siteNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            siteUrlInput.focus();
+        }
+    });
+
+    siteUrlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            modalSave.click();
+        }
+    });
+
     modalSave.addEventListener('click', async () => {
         const name = siteNameInput.value.trim();
         let url = siteUrlInput.value.trim();
@@ -211,6 +263,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         suggestionsList.classList.add('active');
     };
 
+    // Proxy to allow global callback to trigger local renderSuggestions
+    window.renderSuggestionsProxy = (suggestions) => renderSuggestions(suggestions);
+
     const updateSelection = (index) => {
         state.suggestionElements.forEach(el => el.classList.remove('selected'));
         state.selectedIndex = index;
@@ -237,19 +292,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchIcon.classList.add('loading');
         
         state.debounceTimer = setTimeout(() => {
-            // PORTED EXACT LOGIC FROM REFERENCE PROJECT
-            fetch(`https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(data => {
-                    searchIcon.classList.remove('loading');
-                    // data[0] is query, data[1] is array of suggestions
-                    if (data && data[0].toLowerCase() === state.lastQuery.toLowerCase() && data[1]) {
-                        renderSuggestions(data[1].slice(0, 6));
-                    }
-                })
-                .catch(() => {
-                    searchIcon.classList.remove('loading');
-                });
+            const oldScript = document.getElementById('google-suggest-script');
+            if (oldScript) oldScript.remove();
+            
+            const script = document.createElement('script');
+            script.id = 'google-suggest-script';
+            script.src = `https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(query)}&callback=handleGoogleSuggestions`;
+            script.onerror = () => {
+                searchIcon.classList.remove('loading');
+                script.remove();
+            };
+            document.body.appendChild(script);
         }, 150);
     });
 

@@ -5,6 +5,7 @@
  * No coding experience required! Just change the values below.
  */
 
+
 window.CONFIG = {
     animation: {
         // How fast the 3D logo spins (higher = faster)
@@ -88,8 +89,6 @@ window.CONFIG = {
         { trigger: '!per', name: 'Perplexity', url: 'https://www.perplexity.ai/search?q={q}' },
         { trigger: '!dis', name: 'Discord', url: 'https://discord.com/search?q={q}' },
         { trigger: '!tg', name: 'Telegram', url: 'https://t.me/s/{q}' },
-        { trigger: '!messenger', name: 'Messenger', url: 'https://www.messenger.com/t/{q}' },
-        { trigger: '!gmeet', name: 'Google Meet', url: 'https://meet.google.com/search?q={q}' },
         { trigger: '!ytm', name: 'YouTube Music', url: 'https://music.youtube.com/search?q={q}' }
     ]
 };
