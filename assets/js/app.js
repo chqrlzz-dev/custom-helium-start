@@ -120,8 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const getIconUrl = (url) => {
     try {
       const domain = new URL(url).hostname;
-      // unavatar.io is great for high-quality brand logos
-      return `https://unavatar.io/${domain}?fallback=https://icon.horse/icon/${domain}`;
+      return `https://icon.horse/icon/${domain}`;
     } catch (e) {
       return "";
     }
@@ -167,9 +166,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       img.src = getIconUrl(item.url);
       
       img.onerror = () => {
-        // Final fallback to letter if all APIs fail
-        img.style.display = "none";
-        icon.innerHTML = `<span>${item.name[0].toUpperCase()}</span>`;
+        // Fallback to Google if icon.horse fails
+        if (!img.dataset.fallback) {
+          try {
+            const domain = new URL(item.url).hostname;
+            img.dataset.fallback = "true";
+            img.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+          } catch(e) {
+            img.style.display = "none";
+            icon.innerHTML = `<span>${item.name[0].toUpperCase()}</span>`;
+          }
+        } else {
+          img.style.display = "none";
+          icon.innerHTML = `<span>${item.name[0].toUpperCase()}</span>`;
+        }
       };
       icon.appendChild(img);
 
