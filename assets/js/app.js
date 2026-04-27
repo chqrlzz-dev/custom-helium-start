@@ -120,8 +120,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const getIconUrl = (url) => {
     try {
       const domain = new URL(url).hostname;
-      // Using multiple fallbacks for better reliability
-      return `https://unavatar.io/${domain}?fallback=https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+      // Icon.horse is excellent for high-quality icons
+      return `https://icon.horse/icon/${domain}`;
     } catch (e) {
       return "";
     }
@@ -163,17 +163,29 @@ document.addEventListener("DOMContentLoaded", async () => {
       const icon = document.createElement("div");
       icon.className = "icon-shortcut";
 
-      if (item.icon && ICONS[item.icon]) {
-        icon.innerHTML = ICONS[item.icon];
-      } else {
-        const img = document.createElement("img");
-        img.src = getIconUrl(item.url);
-        img.onerror = () => {
+      const img = document.createElement("img");
+      img.src = getIconUrl(item.url);
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.objectFit = "contain";
+      
+      img.onerror = () => {
+        // Fallback to Clearbit if Icon.horse fails, then finally to letter
+        if (!img.dataset.fallback) {
+          try {
+            const domain = new URL(item.url).hostname;
+            img.dataset.fallback = "true";
+            img.src = `https://logo.clearbit.com/${domain}`;
+          } catch(e) {
+            img.style.display = "none";
+            icon.innerHTML = `<span>${item.name[0].toUpperCase()}</span>`;
+          }
+        } else {
           img.style.display = "none";
           icon.innerHTML = `<span>${item.name[0].toUpperCase()}</span>`;
-        };
-        icon.appendChild(img);
-      }
+        }
+      };
+      icon.appendChild(img);
 
       const info = document.createElement("div");
       info.className = "site-info";
