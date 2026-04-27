@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             searchIcon.style.opacity = '0';
         } else {
             bangIndicator.style.opacity = '0';
-            searchIcon.style.opacity = '0.4';
+            searchIcon.style.opacity = '0.6';
         }
     };
 
