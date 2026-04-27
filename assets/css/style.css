@@ -88,7 +88,7 @@ header {
 /* Content Grouping */
 .content-stack {
     width: 100%;
-    max-width: 40rem;
+    max-width: 48rem;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -135,8 +135,8 @@ header {
 /* Bookmarks Tray */
 .tab-tray {
     margin-top: 2rem;
-    display: grid;
-    grid-template-columns: repeat(7, 84px);
+    display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     justify-content: center;
     width: 100%;
@@ -209,5 +209,4 @@ header {
 
 @media (max-width: 768px) { 
     #clock { font-size: 7rem; } 
-    .tab-tray { grid-template-columns: repeat(4, 84px); }
 }
