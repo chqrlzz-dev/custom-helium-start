@@ -120,8 +120,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const getIconUrl = (url) => {
     try {
       const domain = new URL(url).hostname;
-      // Icon.horse is excellent for high-quality icons
-      return `https://icon.horse/icon/${domain}`;
+      // unavatar.io is great for high-quality brand logos
+      return `https://unavatar.io/${domain}?fallback=https://icon.horse/icon/${domain}`;
     } catch (e) {
       return "";
     }
@@ -165,25 +165,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const img = document.createElement("img");
       img.src = getIconUrl(item.url);
-      img.style.width = "100%";
-      img.style.height = "100%";
-      img.style.objectFit = "contain";
       
       img.onerror = () => {
-        // Fallback to Clearbit if Icon.horse fails, then finally to letter
-        if (!img.dataset.fallback) {
-          try {
-            const domain = new URL(item.url).hostname;
-            img.dataset.fallback = "true";
-            img.src = `https://logo.clearbit.com/${domain}`;
-          } catch(e) {
-            img.style.display = "none";
-            icon.innerHTML = `<span>${item.name[0].toUpperCase()}</span>`;
-          }
-        } else {
-          img.style.display = "none";
-          icon.innerHTML = `<span>${item.name[0].toUpperCase()}</span>`;
-        }
+        // Final fallback to letter if all APIs fail
+        img.style.display = "none";
+        icon.innerHTML = `<span>${item.name[0].toUpperCase()}</span>`;
       };
       icon.appendChild(img);
 

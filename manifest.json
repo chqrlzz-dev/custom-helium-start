@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "Helium New Tab",
     "description": "A minimalist, high-performance search dashboard with 3D dithered aesthetics — replaces your new tab page.",
-    "version": "1.5.2",
+    "version": "1.5.3",
     "icons": {
         "16": "assets/icons/icon16.png",
         "48": "assets/icons/icon48.png",
@@ -17,7 +17,8 @@
     "host_permissions": [
         "https://suggestqueries.google.com/*",
         "https://icon.horse/*",
-        "https://logo.clearbit.com/*"
+        "https://logo.clearbit.com/*",
+        "https://unavatar.io/*"
     ],
     "content_security_policy": {
         "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://suggestqueries.google.com; img-src * data: blob: ;"
