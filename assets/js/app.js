@@ -26,11 +26,7 @@ const Storage = {
 // Global callback for JSONP Google Suggestions
 window.handleGoogleSuggestions = (data) => {
     const searchIcon = document.querySelector('.search-icon');
-    const suggestionsList = document.getElementById('suggestions-list');
     if (searchIcon) searchIcon.classList.remove('loading');
-    
-    // We need to access state.lastQuery. Since it's inside DOMContentLoaded, 
-    // we'll rely on the fact that data[0] is the original query.
     if (data && data[1] && window.renderSuggestionsProxy) {
         window.renderSuggestionsProxy(data[1].slice(0, 6));
     }
@@ -88,6 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const updateClock = () => {
+        if (!clockEl) return;
         const now = new Date();
         let h = now.getHours();
         const m = String(now.getMinutes()).padStart(2, '0');
@@ -99,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (ampmEl) ampmEl.textContent = '';
         }
         h = String(h).padStart(2, '0');
-        if (clockEl) clockEl.innerHTML = `${h}<span class="colon" style="opacity:0.4; margin: 0 0.05em;">:</span>${m}`;
+        clockEl.innerHTML = `${h}<span class="colon" style="opacity:0.4; margin: 0 0.05em;">:</span>${m}`;
         const options = { weekday: 'long', month: 'long', day: 'numeric' };
         if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', options);
         if (timeToggle) timeToggle.textContent = state.timeFormat.toUpperCase();
@@ -161,7 +158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const updateBangIndicator = (query) => {
-        if (!bangIndicator) return;
+        if (!bangIndicator || !searchIcon) return;
         const trigger = query.split(' ')[0].toLowerCase();
         const bang = trigger.startsWith('!') && CONFIG.bangsList.find(b => b.trigger === trigger);
         if (bang) {
@@ -176,6 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const renderSuggestions = (suggestions, isBangs = false) => {
+        if (!suggestionsList) return;
         state.selectedIndex = -1;
         suggestionsList.innerHTML = '';
         if (!suggestions || suggestions.length === 0) {
@@ -216,141 +214,158 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // Initial render
+    // 1. Initial immediate focus
+    if (searchInput) searchInput.focus();
+
+    // 2. Load and Render state
+    const [bookmarks, timeFormat, focusMode, bangHistory] = await Promise.all([
+        Storage.get('bookmarks', defaultBookmarks),
+        Storage.get('timeFormat', '12h'),
+        Storage.get('focusMode', false),
+        Storage.get('bangHistory', {})
+    ]);
+
+    state.bookmarks = bookmarks.length > 0 ? bookmarks : defaultBookmarks;
+    state.timeFormat = timeFormat;
+    state.focusMode = focusMode;
+    state.bangHistory = bangHistory;
+
     updateClock();
     renderTray();
     updateBangIndicator('');
 
-    // Load actual state
-    const loadedBookmarks = await Storage.get('bookmarks', defaultBookmarks);
-    state.bookmarks = loadedBookmarks.length > 0 ? loadedBookmarks : defaultBookmarks;
-    state.timeFormat = await Storage.get('timeFormat', '12h');
-    state.focusMode = await Storage.get('focusMode', false);
-    state.bangHistory = await Storage.get('bangHistory', {});
-
-    updateClock();
-    renderTray();
-
-    // Entrance
+    // 3. Start Entrance Animation
     setTimeout(() => {
         document.querySelectorAll('.entrance-reveal').forEach((el, i) => {
             setTimeout(() => el.classList.add('revealed'), i * 60);
         });
         if (state.focusMode) document.body.classList.add('focus-active');
-        searchInput.focus();
-    }, 100);
+        if (searchInput) searchInput.focus();
+    }, 50);
 
     // Events
-    timeToggle.addEventListener('click', async () => {
-        state.timeFormat = state.timeFormat === '12h' ? '24h' : '12h';
-        await Storage.set('timeFormat', state.timeFormat);
-        updateClock();
-    });
+    if (timeToggle) {
+        timeToggle.addEventListener('click', async () => {
+            state.timeFormat = state.timeFormat === '12h' ? '24h' : '12h';
+            await Storage.set('timeFormat', state.timeFormat);
+            updateClock();
+        });
+    }
 
-    modalCancel.addEventListener('click', () => modal.classList.add('hidden'));
+    if (modalCancel) modalCancel.addEventListener('click', () => modal.classList.add('hidden'));
     
-    siteNameInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            siteUrlInput.focus();
-        }
-    });
+    if (siteNameInput) {
+        siteNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                siteUrlInput.focus();
+            }
+        });
+    }
 
-    siteUrlInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            modalSave.click();
-        }
-    });
+    if (siteUrlInput) {
+        siteUrlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                modalSave.click();
+            }
+        });
+    }
 
-    modalSave.addEventListener('click', async () => {
-        const name = siteNameInput.value.trim();
-        let url = siteUrlInput.value.trim();
-        if (name && url) {
-            if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-            state.bookmarks.push({ name, url });
-            await Storage.set('bookmarks', state.bookmarks);
-            renderTray();
-            modal.classList.add('hidden');
-            siteNameInput.value = ''; siteUrlInput.value = '';
-        }
-    });
+    if (modalSave) {
+        modalSave.addEventListener('click', async () => {
+            const name = siteNameInput.value.trim();
+            let url = siteUrlInput.value.trim();
+            if (name && url) {
+                if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+                state.bookmarks.push({ name, url });
+                await Storage.set('bookmarks', state.bookmarks);
+                renderTray();
+                modal.classList.add('hidden');
+                siteNameInput.value = ''; siteUrlInput.value = '';
+            }
+        });
+    }
 
     window.renderSuggestionsProxy = (suggestions) => renderSuggestions(suggestions);
 
-    searchInput.addEventListener('input', (e) => {
-        const val = e.target.value;
-        const query = val.trim();
-        updateBangIndicator(val);
-        if (!query) { renderSuggestions([]); return; }
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            const query = val.trim();
+            updateBangIndicator(val);
+            if (!query) { renderSuggestions([]); return; }
 
-        if (query.startsWith('!')) {
-            if (query === '!focus') { renderSuggestions([]); return; }
-            const matches = CONFIG.bangsList.filter(b => b.trigger.startsWith(query.toLowerCase())).slice(0, 6);
-            renderSuggestions(matches, true);
-            return;
-        }
-
-        clearTimeout(state.debounceTimer);
-        state.lastQuery = query;
-        searchIcon.classList.add('loading');
-        
-        state.debounceTimer = setTimeout(() => {
-            const oldScript = document.getElementById('google-suggest-script');
-            if (oldScript) oldScript.remove();
-            
-            const script = document.createElement('script');
-            script.id = 'google-suggest-script';
-            script.src = `https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(query)}&callback=handleGoogleSuggestions`;
-            script.onerror = () => {
-                searchIcon.classList.remove('loading');
-                script.remove();
-            };
-            document.body.appendChild(script);
-        }, 150);
-    });
-
-    searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            const idx = state.selectedIndex < state.suggestionElements.length - 1 ? state.selectedIndex + 1 : 0;
-            updateSelection(idx);
-            if (state.suggestionElements[idx]) searchInput.value = state.suggestionElements[idx].dataset.value;
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            const idx = state.selectedIndex > 0 ? state.selectedIndex - 1 : state.suggestionElements.length - 1;
-            updateSelection(idx);
-            if (state.suggestionElements[idx]) searchInput.value = state.suggestionElements[idx].dataset.value;
-        } else if (e.key === 'Escape') {
-            renderSuggestions([]);
-        }
-    });
-
-    searchForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const val = searchInput.value.trim();
-        if (!val) return;
-        if (val === '!focus') {
-            state.focusMode = !state.focusMode;
-            await Storage.set('focusMode', state.focusMode);
-            document.body.classList.toggle('focus-active', state.focusMode);
-            searchInput.value = '';
-            return;
-        }
-        if (val.startsWith('!')) {
-            const parts = val.split(' ');
-            const trigger = parts[0].toLowerCase();
-            const bang = CONFIG.bangsList.find(b => b.trigger === trigger);
-            if (bang) {
-                state.bangHistory[trigger] = (state.bangHistory[trigger] || 0) + 1;
-                await Storage.set('bangHistory', state.bangHistory);
-                window.location.href = bang.url.replace('{q}', encodeURIComponent(parts.slice(1).join(' ')));
+            if (query.startsWith('!')) {
+                if (query === '!focus') { renderSuggestions([]); return; }
+                const matches = CONFIG.bangsList.filter(b => b.trigger.startsWith(query.toLowerCase())).slice(0, 6);
+                renderSuggestions(matches, true);
                 return;
             }
-        }
-        const engine = CONFIG.search.engineUrls[CONFIG.search.default] || CONFIG.search.engineUrls.google;
-        window.location.href = `${engine}${encodeURIComponent(val)}`;
-    });
+
+            clearTimeout(state.debounceTimer);
+            state.lastQuery = query;
+            if (searchIcon) searchIcon.classList.add('loading');
+            
+            state.debounceTimer = setTimeout(() => {
+                const oldScript = document.getElementById('google-suggest-script');
+                if (oldScript) oldScript.remove();
+                
+                const script = document.createElement('script');
+                script.id = 'google-suggest-script';
+                script.src = `https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(query)}&callback=handleGoogleSuggestions`;
+                script.onerror = () => {
+                    if (searchIcon) searchIcon.classList.remove('loading');
+                    script.remove();
+                };
+                document.body.appendChild(script);
+            }, 150);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const idx = state.selectedIndex < state.suggestionElements.length - 1 ? state.selectedIndex + 1 : 0;
+                updateSelection(idx);
+                if (state.suggestionElements[idx]) searchInput.value = state.suggestionElements[idx].dataset.value;
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const idx = state.selectedIndex > 0 ? state.selectedIndex - 1 : state.suggestionElements.length - 1;
+                updateSelection(idx);
+                if (state.suggestionElements[idx]) searchInput.value = state.suggestionElements[idx].dataset.value;
+            } else if (e.key === 'Escape') {
+                renderSuggestions([]);
+            }
+        });
+    }
+
+    if (searchForm) {
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const val = searchInput.value.trim();
+            if (!val) return;
+            if (val === '!focus') {
+                state.focusMode = !state.focusMode;
+                await Storage.set('focusMode', state.focusMode);
+                document.body.classList.toggle('focus-active', state.focusMode);
+                searchInput.value = '';
+                return;
+            }
+            if (val.startsWith('!')) {
+                const parts = val.split(' ');
+                const trigger = parts[0].toLowerCase();
+                const bang = CONFIG.bangsList.find(b => b.trigger === trigger);
+                if (bang) {
+                    state.bangHistory[trigger] = (state.bangHistory[trigger] || 0) + 1;
+                    await Storage.set('bangHistory', state.bangHistory);
+                    window.location.href = bang.url.replace('{q}', encodeURIComponent(parts.slice(1).join(' ')));
+                    return;
+                }
+            }
+            const engine = CONFIG.search.engineUrls[CONFIG.search.default] || CONFIG.search.engineUrls.google;
+            window.location.href = `${engine}${encodeURIComponent(val)}`;
+        });
+    }
 
     setInterval(updateClock, 1000);
 });
