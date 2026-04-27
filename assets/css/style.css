@@ -136,20 +136,19 @@ header {
 .tab-tray {
     margin-top: 2rem;
     display: grid;
-    grid-template-columns: repeat(6, 80px);
-    gap: 12px;
+    grid-template-columns: repeat(7, 84px);
+    gap: 16px;
     justify-content: center;
     width: 100%;
 }
 
 .tab-link {
-    position: relative; padding: 12px 8px; width: 80px;
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
+    position: relative; padding: 12px 4px; width: 84px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
     border-radius: 18px; transition: all var(--a-snappy);
-    text-decoration: none; color: rgba(255, 255, 255, 0.5);
+    text-decoration: none; color: rgba(255, 255, 255, 0.4);
 }
-.tab-link:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-3px); color: #fff; }
+.tab-link:hover { transform: translateY(-4px); color: #fff; }
 
 .delete-btn {
     position: absolute; top: -4px; right: -4px;
@@ -210,5 +209,5 @@ header {
 
 @media (max-width: 768px) { 
     #clock { font-size: 7rem; } 
-    .tab-tray { grid-template-columns: repeat(3, 80px); }
+    .tab-tray { grid-template-columns: repeat(4, 84px); }
 }
